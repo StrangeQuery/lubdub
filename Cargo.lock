@@ -5,7 +5,8 @@ version = 4
 [[package]]
 name = "heartburn"
 version = "0.1.0"
-source = "git+https://github.com/StrangeQuery/cardiaq?rev=89c2776526431224b4bd830d8758def3b8952f2c#89c2776526431224b4bd830d8758def3b8952f2c"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bfc5b791c146e8a3694c2c2eca8cddba3c0ca42419b41fc4f0bb206137a8a52"
 
 [[package]]
 name = "xtrack"

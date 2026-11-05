@@ -5,6 +5,7 @@ version = 4
 [[package]]
 name = "heartburn"
 version = "0.1.0"
+source = "git+https://github.com/StrangeQuery/cardiaq?rev=89c2776526431224b4bd830d8758def3b8952f2c#89c2776526431224b4bd830d8758def3b8952f2c"
 
 [[package]]
 name = "xtrack"

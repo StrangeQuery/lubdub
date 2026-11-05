@@ -31,9 +31,9 @@ name = "dub"
 path = "src/bin/dub.rs"
 
 [dependencies]
-# the CARDIAC engine: the machine, decks and the assembler. A path to a cardiaq checkout beside this one for now;
+# the CARDIAC engine: the machine, decks and the assembler. Pinned to a cardiaq commit by git for now;
 # it becomes `heartburn = "0.1"` once heartburn is published on crates.io.
-heartburn = { version = "0.1.0", path = "../heartburn" }
+heartburn = { version = "0.1.0", git = "https://github.com/StrangeQuery/cardiaq", rev = "89c2776526431224b4bd830d8758def3b8952f2c" }
 
 [profile.release]
 debug = false

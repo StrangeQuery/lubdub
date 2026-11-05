@@ -1,0 +1,39 @@
+[package]
+name = "xtrack"
+version = "0.1.0"
+edition = "2021"
+description = "Audio a CARDIAC decodes: the xtrack encoder, and the lub and dub players that decode on CARDIACs"
+rust-version = "1.97"
+license = "MIT"
+repository = "https://github.com/StrangeQuery/xtrack"
+readme = "README.md"
+keywords = ["cardiac", "audio", "adpcm", "retrocomputing", "education"]
+categories = ["multimedia::audio", "emulators", "command-line-utilities"]
+# what a package gets: the library and commands, and the decoder the library embeds
+include = ["/src", "/audio/decode.cq", "/README.md", "/LICENSE"]
+
+[lib]
+name = "xtrack"
+path = "src/lib.rs"
+
+# xtrack codes a channel as a track of cards, lub decodes it on a CARDIAC and outputs the samples, dub decodes
+# two, left and right, each on a CARDIAC of its own, and outputs them as one stereo stream
+[[bin]]
+name = "xtrack"
+path = "src/bin/xtrack.rs"
+
+[[bin]]
+name = "lub"
+path = "src/bin/lub.rs"
+
+[[bin]]
+name = "dub"
+path = "src/bin/dub.rs"
+
+[dependencies]
+# the CARDIAC engine: the machine, decks and the assembler. A path to a cardiaq checkout beside this one for now;
+# it becomes `heartburn = "0.1"` once heartburn is published on crates.io.
+heartburn = { version = "0.1.0", path = "../heartburn" }
+
+[profile.release]
+debug = false

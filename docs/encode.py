@@ -5,9 +5,9 @@
 
 CHANNEL is 0 for the left channel or 1 for the right. The track is written to CARDS, one card per line. If EXPECT
 is given, the samples the decoder should output are written there, one per line. For each block of 64 samples, the
-encoder picks the step size M * 10^K (M from 1 to 9, K from 0 to 3) with the smallest error. It chooses each code
-against the decoder's own prediction (twice the previous sample, minus the one before it), and it never lets a
-sample go outside 16 bits.
+encoder picks the smallest step size M * 10^K (M from 1 to 9, K from 0 to 3) whose codes reach as far as the block
+strays from the prediction (twice the previous sample, minus the one before it). It chooses each code against the
+decoder's own prediction, and it never lets a sample go outside 16 bits.
 """
 import struct, sys
 
@@ -15,24 +15,27 @@ N = 64
 STEPS = [(k, m) for k in range(4) for m in range(1, 10)]
 
 def block(xs, s1, s2, step):
-    err, out = 0, []
+    out = []
     for x in xs:
         e = 2 * s1 - s2
-        lo, hi = -((32768 + e) // step), (32767 - e) // step
-        c = max(-500, lo, min(499, hi, round((x - e) / step)))
+        lo, hi = max(-500, -((32768 + e) // step)), min(499, (32767 - e) // step)
+        if lo > hi:
+            return None   # this step can't keep a sample within 16 bits
+        c = max(lo, min(hi, round((x - e) / step)))
         s = e + c * step
-        err += (x - s) ** 2
         out.append((c, s))
         s2, s1 = s1, s
-    return err, out
+    return out
 
 def encode(xs):
     cards, samples, s1, s2 = [], [], 0, 0
     for b in range(0, len(xs), N):
         blk = xs[b:b + N]
         blk += [blk[-1]] * (N - len(blk))
-        best = min(((block(blk, s1, s2, m * 10**k), (k, m)) for k, m in STEPS), key=lambda r: r[0][0])
-        (_, out), (k, m) = best
+        p = [s2, s1] + blk
+        far = max(abs(p[i] - (2 * p[i - 1] - p[i - 2])) for i in range(2, len(p)))
+        out, k, m = next((o, k, m) for k, m in STEPS if 499 * m * 10**k >= far
+                         for o in [block(blk, s1, s2, m * 10**k)] if o)
         cards += [k, m] + [c for c, _ in out]
         samples += [s for _, s in out]
         s1, s2 = out[-1][1], out[-2][1]

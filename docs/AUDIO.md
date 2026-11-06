@@ -393,8 +393,9 @@ It uses 83 of the 96 free cells: the code is in cells 03 to 66 and the data in c
 
 ### The encoder
 
-`encode.py` encodes one channel. For each block, it tries all 36 step sizes and keeps the one with the smallest
-squared error. It encodes "closed loop": it chooses each code against the sample the decoder will actually
+`encode.py` encodes one channel. For each block, it finds the farthest any sample strays from the prediction, and
+takes the smallest step size whose codes reach that far. (It used to try all 36 step sizes; the next section says
+why it doesn't any more.) It encodes "closed loop": it chooses each code against the sample the decoder will actually
 produce, not against the original, so small errors never add up over time. It never lets a sample go outside 16
 bits. Besides the cards, it can also write out the samples the decoder should produce, and that is what we check
 the decoder against.
@@ -407,9 +408,9 @@ the decoder against.
 
 CHANNEL is 0 for the left channel or 1 for the right. The track is written to CARDS, one card per line. If EXPECT
 is given, the samples the decoder should output are written there, one per line. For each block of 64 samples, the
-encoder picks the step size M * 10^K (M from 1 to 9, K from 0 to 3) with the smallest error. It chooses each code
-against the decoder's own prediction (twice the previous sample, minus the one before it), and it never lets a
-sample go outside 16 bits.
+encoder picks the smallest step size M * 10^K (M from 1 to 9, K from 0 to 3) whose codes reach as far as the block
+strays from the prediction (twice the previous sample, minus the one before it). It chooses each code against the
+decoder's own prediction, and it never lets a sample go outside 16 bits.
 """
 import struct, sys
 
@@ -417,24 +418,27 @@ N = 64
 STEPS = [(k, m) for k in range(4) for m in range(1, 10)]
 
 def block(xs, s1, s2, step):
-    err, out = 0, []
+    out = []
     for x in xs:
         e = 2 * s1 - s2
-        lo, hi = -((32768 + e) // step), (32767 - e) // step
-        c = max(-500, lo, min(499, hi, round((x - e) / step)))
+        lo, hi = max(-500, -((32768 + e) // step)), min(499, (32767 - e) // step)
+        if lo > hi:
+            return None   # this step can't keep a sample within 16 bits
+        c = max(lo, min(hi, round((x - e) / step)))
         s = e + c * step
-        err += (x - s) ** 2
         out.append((c, s))
         s2, s1 = s1, s
-    return err, out
+    return out
 
 def encode(xs):
     cards, samples, s1, s2 = [], [], 0, 0
     for b in range(0, len(xs), N):
         blk = xs[b:b + N]
         blk += [blk[-1]] * (N - len(blk))
-        best = min(((block(blk, s1, s2, m * 10**k), (k, m)) for k, m in STEPS), key=lambda r: r[0][0])
-        (_, out), (k, m) = best
+        p = [s2, s1] + blk
+        far = max(abs(p[i] - (2 * p[i - 1] - p[i - 2])) for i in range(2, len(p)))
+        out, k, m = next((o, k, m) for k, m in STEPS if 499 * m * 10**k >= far
+                         for o in [block(blk, s1, s2, m * 10**k)] if o)
         cards += [k, m] + [c for c, _ in out]
         samples += [s for _, s in out]
         s1, s2 = out[-1][1], out[-2][1]
@@ -456,13 +460,44 @@ def main():
 main()
 ```
 
-It is slow. It takes about 20 seconds to encode the 32-second test clip, and nearly all of that time goes into
-trying every step size. `xtrack` is the same encoder written in Rust (`xtrack::encode`). It writes exactly
-the same track, card for card, in under half a second. It even rounds halves to the nearest even number,
-as Python's `round` does, so that the two agree. It adds one safeguard. Sometimes the prediction overshoots so far
-that a small step size can't bring the sample back inside 16 bits. When that happens, `xtrack` doesn't consider
-that step size for the block. (The Python version would write a sample the decoder can't hold.) The largest step
-size, 9,000, can always reach, so every block still gets a step size.
+It takes 0.9 seconds to encode the 32-second test clip. `xtrack` is the same encoder written in Rust
+(`xtrack::encode`). It writes exactly the same track, card for card, in 0.03 seconds. It even rounds halves to the
+nearest even number, as Python's `round` does, so that the two agree. Both have one safeguard. Sometimes the
+prediction overshoots so far that a small step size can't bring the sample back inside 16 bits. When that happens,
+the encoder moves on to the next larger step size. The largest, 9,000, can always reach, so every block still gets
+a step size.
+
+### The search we didn't need
+
+Our first encoder tried all 36 step sizes on every block, coded the block with each one, and kept the one with the
+least squared error. That is 36 times the work of coding the block once, and we assumed it was what bought us the
+quality. When we finally measured it, it wasn't.
+
+We put the search up against the one-pass rule above, which looks at each block once and never tries a step size.
+On the test clip:
+
+| Encoder | Signal-to-noise |
+|---|---|
+| One value per sample (1,999 levels), no prediction | 48.4 dB |
+| One step size for the whole clip | 60.5 dB |
+| A step size for each block, by the one-pass rule | 77.79 dB |
+| A step size for each block, all 36 tried | 77.83 dB |
+
+The search buys 0.04 dB, which nobody can hear. Over the whole nine-minute piece it is the same story: 68.97 dB
+against 68.94 on the left channel, and 74.80 against 74.74 on the right. The rule's worst single error is actually
+smaller, 45 against 90 on the left and 25 against 44 on the right. The search keeps whichever step size has the
+least error in total, even when that step size lets one sample miss by a lot. The rule doesn't pick a step size
+too small to reach.
+
+The reason is in the tracks. Of the test clip's 24,000 blocks, 20,360 (85%) use a step size of 1, and another 9%
+use 2. At 48,000 samples per second, music changes so little from one sample to the next that the prediction is
+rarely more than 499 off, and a step size of 1 can reach anything within 499. So most blocks are coded exactly,
+and the CARDIAC gives back the recording sample for sample. When a block does need a larger step size, the
+smallest one that reaches is nearly always the best one too, so there is nothing for a search to find.
+
+The search does earn its keep when the codes are coarse. With one digit per sample and blocks of 32, it gets
+39.0 dB, and the one-pass rule gets 37.2. Three digits leave it nothing to do. So `xtrack` now uses the rule, and
+encodes 16 times as fast as before: 0.5 seconds for one channel of the whole piece, instead of 8.4.
 
 ### Tracks are CARDIAC input
 
@@ -619,7 +654,7 @@ expected samples, both through the library and through the programs.
 | Quality | 77.8 dB signal-to-noise over the test clip. |
 | Speed | 38 + M instructions per sample, 39.5 on average including the headers and the loader (60.6 million for 1,536,000 samples). That is about 1.9 million instructions per second for one channel at 48 kHz. |
 | Memory | 83 of the 96 free cells. |
-| Encoding | `xtrack` takes 0.46 s for the test clip and 8.1 s for one channel of the whole nine-minute piece. The Python version takes 20 s for the test clip. |
+| Encoding | `xtrack` takes 0.03 s for the test clip and 0.5 s for one channel of the whole nine-minute piece. The Python version takes 0.9 s for the test clip. |
 | Track size | 66 cards for every 64 samples, plus one card at the end: 1,584,001 cards (5.2 MB as text) for the test clip. |
 | The whole piece | 27.2 million cards per channel, 54.4 million for stereo. Stored as 2 bytes per card, that is 109 MB, about the same size as the raw 16-bit audio (105 MB). As text it is 186 MB. |
 
@@ -732,11 +767,11 @@ run, if you want to count them.
 
 The encoder works one block at a time, and each block depends only on its own 64 samples and the last two samples
 the decoder produced. So the host could encode each block a few milliseconds before the CARDIAC needs it, and
-`xtrack` is fast enough to do that on about 3% of one core for stereo.
+`xtrack` is fast enough to do that on about 0.2% of one core for stereo.
 
-We don't, for two reasons. First, encoding is the expensive half of the work: for every block it tries all 36
-step sizes, predicting, dividing, rounding and adding up squared errors. If the host did that live, it would be
-doing far more arithmetic than the CARDIACs. Second, it would be circular. To encode live, the host would need the
+We don't, for two reasons. First, encoding is arithmetic: for every sample the encoder predicts, divides and
+rounds. If the host did that live, it would be doing about as much arithmetic as the CARDIACs, which is exactly
+what the host isn't allowed to do. Second, it would be circular. To encode live, the host would need the
 raw audio in memory, and then it could simply play that audio directly.
 
 A track isn't a pre-rendered result. It is the music stored in the form the player reads, just as a demo ships a

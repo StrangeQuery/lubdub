@@ -75,27 +75,24 @@ fn code_block(xs: &[i16], mut s1: i64, mut s2: i64, step: i64) -> Option<(i64, C
 }
 
 /// A channel's track (its last card the end, -1), and the samples the decoder will output from it. Each block takes
-/// the step with the least squared error, the first such in the order K 0-3, M 1-9, of those that keep it within
-/// 16 bits; the last block is filled out with its last sample.
+/// the smallest step whose codes reach the farthest any of its samples is from the prediction (the prediction made
+/// from the samples before it), and that keeps it within 16 bits; the last block is filled out with its last sample.
+/// Trying all 36 steps and keeping the one with the least error measured no better (docs/AUDIO.md).
 pub fn encode(samples: &[i16]) -> (Vec<i32>, Vec<i16>) {
     let (mut cards, mut decoded) = (vec![], vec![]);
     let (mut s1, mut s2) = (0, 0);
     for chunk in samples.chunks(BLOCK) {
         let mut block = chunk.to_vec();
         block.resize(BLOCK, chunk[chunk.len() - 1]);
-        // the best step so far: its error, K, M, and the block coded with it
-        let mut best: Option<(i64, i32, i32, Coded)> = None;
-        for k in 0..4 {
-            for m in 1..10 {
-                let Some((err, out)) = code_block(&block, s1, s2, m as i64 * 10i64.pow(k as u32)) else {
-                    continue;
-                };
-                if best.as_ref().is_none_or(|b| err < b.0) {
-                    best = Some((err, k, m, out));
-                }
-            }
-        }
-        let (_, k, m, out) = best.expect("9 * 10^3 reaches 16 bits from any prediction");
+        // how far the block strays from the prediction, each sample predicted from the two before it
+        let mut p = vec![s2, s1];
+        p.extend(block.iter().map(|&x| x as i64));
+        let far = p.windows(3).map(|w| (w[2] - (2 * w[1] - w[0])).abs()).max().unwrap();
+        let (k, m, out) = (0..4)
+            .flat_map(|k| (1..10).map(move |m| (k, m)))
+            .filter(|&(k, m)| 499 * m as i64 * 10i64.pow(k as u32) >= far)
+            .find_map(|(k, m)| code_block(&block, s1, s2, m as i64 * 10i64.pow(k as u32)).map(|(_, out)| (k, m, out)))
+            .expect("9 * 10^3 reaches 16 bits from any prediction");
         cards.extend([k, m]);
         cards.extend(out.iter().map(|&(c, _)| c));
         decoded.extend(out.iter().map(|&(_, s)| s));

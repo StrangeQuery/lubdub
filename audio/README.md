@@ -24,7 +24,7 @@ channel of `song.wav` at 48,000 samples per second:
 
     xtrack song.left.s16 > song.left.track
 
-This is the only step that happens ahead of time. `xtrack` encodes a minute of audio in about a second.
+This is the only step that happens ahead of time. `xtrack` encodes a minute of audio in well under a tenth of a second.
 
 ### 3. Take a peek at the track
 
@@ -143,9 +143,10 @@ the loud section:
 | Ours, with one digit per sample and blocks of 32 | about 3.9 bits | 39.0 dB |
 | Ours, as `xtrack`, `lub` and `dub` use it: three digits per sample, blocks of 64 | about 10.3 bits | 77.8 dB |
 
-With about the same amount of data per sample, ours comes out 3 dB better than IMA ADPCM. That's mostly because our
-encoder tries every step size on each block and keeps the best one, while IMA ADPCM has to adjust its step size
-from the codes as it goes. Size isn't the goal on CARDIAC, though, so the real decoder spends three digits on every
+With about the same amount of data per sample, ours comes out 3 dB better than IMA ADPCM. Part of that is that our
+encoder chooses a step size for each block ahead of time and sends it in a header, while IMA ADPCM has to adjust
+its step size from the codes as it goes. The rest is that this one-digit version tried every step size on each
+block and kept the best. With the one-pass rule `xtrack` uses now, it gets 37.2 dB. Size isn't the goal on CARDIAC, though, so the real decoder spends three digits on every
 sample, and its errors end up about 42 dB quieter than IMA ADPCM's.
 
 ### Trading multiplication for powers of ten
@@ -170,8 +171,8 @@ decimal.
 
 ### Blocks, and a decoder that rewrites itself
 
-The samples are grouped into blocks of 64, and each block has its own step size. The encoder tries all 36 step
-sizes on each block and keeps the one that comes closest to the real music. A track is laid out like this:
+The samples are grouped into blocks of 64, and each block has its own step size. The encoder gives each block the
+smallest step size that can reach every sample in it. A track is laid out like this:
 
     1        K = 1  ]  the block's step size is M x 10^K = 2 x 10 = 20
     2        M = 2  ]

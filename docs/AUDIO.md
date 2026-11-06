@@ -20,7 +20,7 @@ Everything described here is in this repository:
 
 - The decoder is the CARDIAC program [`audio/decode.cq`](../audio/decode.cq).
 - The encoder and the decoder's assembly live in the `xtrack` library ([`src/lib.rs`](../src/lib.rs)), which
-  builds on heartburn, the CARDIAC engine from [cardiaq](https://github.com/StrangeQuery/cardiaq).
+  builds on [heartburn](https://github.com/StrangeQuery/heartburn), the CARDIAC engine.
 - `xtrack` encodes a channel, `lub` plays one channel, and `dub` plays two ([`src/bin/`](../src/bin/)).
 - [`encode.py`](encode.py), next to this page, is the encoder as we first wrote it, in Python. We used it as the
   reference when we wrote the Rust version.
@@ -283,7 +283,7 @@ first OUT, to read the cells `c`, `u`, `hi`, `lo`, `h1`, `l1`, `h2` and `l2`.
 
 ### The decoder listing
 
-This is [`audio/decode.cq`](../audio/decode.cq), in cardiaq's six-column listing format. `carc audio/decode.cq`
+This is [`audio/decode.cq`](../audio/decode.cq), in heartburn's six-column listing format. `carc audio/decode.cq`
 turns it into the deck `audio/decode.cqb`. `lub` and `dub` have the listing built in and assemble it the same way
 `carc` does.
 

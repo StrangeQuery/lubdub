@@ -8,7 +8,9 @@ These three tools play music, with every sample worked out by a CARDIAC:
 - `dub` plays two tracks, left and right, as stereo, with one CARDIAC for each channel.
 
 The decoder is an ordinary CARDIAC program. You can assemble it with `carc`, run it with `burn`, and step through
-it in `ekg` (all three from [cardiaq](https://github.com/StrangeQuery/cardiaq)) or Cardigan like any other.
+it in `ekg` or Cardigan like any other. `carc`, `burn` and `ekg` come from
+[heartburn](https://github.com/StrangeQuery/heartburn) (`brew install strangequery/tap/heartburn`), and with
+cargo-cardiac they are `cargo cardiac asm`, `cargo cardiac run` and `cargo cardiac debug`.
 
 ## Part 1: Using xtrack, lub and dub
 

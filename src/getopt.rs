@@ -1,4 +1,4 @@
-//! The command line the GNU way, for xtrack, lub and dub, as cardiaq's commands read theirs: short options
+//! The command line the GNU way, for xtrack, lub and dub, as heartburn's commands read theirs: short options
 //! (`-o FILE`, `-oFILE`, several flags in one `-hq`), long ones (`--output=FILE`, `--output FILE`, or any
 //! unambiguous start of the name, `--out`), `--` ending the options, and `-` an operand (standard input or
 //! output). Mistakes are reported as getopt reports them, with `Try 'PROG --help'`, and exit 2.

@@ -100,9 +100,9 @@ Then encode the samples, either from the file or straight from `ffmpeg` through 
 
 **Output.** The track goes to standard output, one card per line. Each block of 64 samples starts with two cards,
 K and M, which give the block's step size. Then come 64 cards, one per sample, each a code from -500 to 499. The
-last card is -1, which marks the end. For each block, `xtrack` tries every step size and keeps the one with the
-smallest error. It chooses each code to match the sample the decoder will actually produce, so small errors don't
-add up over time. It encodes 32 seconds of audio in about half a second.
+last card is -1, which marks the end. For each block, `xtrack` takes the smallest step size that reaches as far as
+the block strays from the prediction. It chooses each code to match the sample the decoder will actually produce, so small errors don't
+add up over time. It encodes 32 seconds of audio in a few hundredths of a second.
 
 | | |
 |---|---|

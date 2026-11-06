@@ -80,7 +80,7 @@ fn tracks(test: &str, channels: &[&[i16]]) -> (Vec<String>, Vec<Vec<i16>>) {
         .enumerate()
         .map(|(i, xs)| {
             let (cards, expected) = xtrack::encode(xs);
-            let path = std::env::temp_dir().join(format!("cardiaq-{test}-{}-{i}.track", std::process::id()));
+            let path = std::env::temp_dir().join(format!("xtrack-{test}-{}-{i}.track", std::process::id()));
             std::fs::write(&path, cards.iter().map(|c| format!("{c}\n")).collect::<String>()).unwrap();
             (path.to_string_lossy().into_owned(), expected)
         })

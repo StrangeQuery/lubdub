@@ -70,8 +70,8 @@ All of the commands follow the GNU conventions. They have `--help` and `--versio
 ## Install
 
 Currently no binaries are shipped. If you have [Rust](https://rustup.rs) installed, you can build them from the
-source code. Cargo fetches heartburn, the CARDIAC engine from [cardiaq](https://github.com/StrangeQuery/cardiaq),
-by itself:
+source code. Cargo fetches [heartburn](https://github.com/StrangeQuery/heartburn), the CARDIAC engine, by
+itself:
 
     git clone https://github.com/StrangeQuery/xtrack
     cd xtrack

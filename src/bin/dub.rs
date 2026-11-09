@@ -1,5 +1,5 @@
 //! dub plays two channels of audio, left and right, each decoded by its own CARDIAC. (lub plays one channel.) The
-//! decoding is `xtrack::Stereo`: two CARDIACs running the decoder, `audio/decode.cq`, taking turns one
+//! decoding is `lubdub::Stereo`: two CARDIACs running the decoder, `audio/decode.cq`, taking turns one
 //! block at a time on a single thread. dub only reads the two tracks and writes the samples to standard output,
 //! left then right, which makes a stereo stream.
 use std::fs::File;
@@ -102,7 +102,7 @@ fn main() {
         )
     }
     let names = [shown(left), shown(right)];
-    let mut stereo = xtrack::Stereo::new(cards(left), cards(right));
+    let mut stereo = lubdub::Stereo::new(cards(left), cards(right));
     let mut out = BufWriter::new(io::stdout().lock());
     loop {
         match stereo.next_block() {
@@ -114,14 +114,14 @@ fn main() {
             Err((side, e)) => {
                 written(out.flush());
                 let (this, other) = match side {
-                    xtrack::Side::Left => (&names[0], &names[1]),
-                    xtrack::Side::Right => (&names[1], &names[0]),
+                    lubdub::Side::Left => (&names[0], &names[1]),
+                    lubdub::Side::Right => (&names[1], &names[0]),
                 };
                 match e {
-                    xtrack::Error::Longer(n) => die(format!(
+                    lubdub::Error::Longer(n) => die(format!(
                         "the tracks aren't the same length: {this} has {n} samples more than {other}"
                     )),
-                    xtrack::Error::NoEnd => die(format!("{this} {e}")),
+                    lubdub::Error::NoEnd => die(format!("{this} {e}")),
                     e => die(format!("{this}: {e}")),
                 }
             }

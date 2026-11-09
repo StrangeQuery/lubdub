@@ -1,4 +1,4 @@
-# xtrack
+# lubdub
 
 `xtrack`, `lub` and `dub` play sound that a CARDIAC decodes. The CARDIAC does all of the decoding arithmetic for
 every sample: every prediction, every correction and every carry. The host only feeds it cards and passes its
@@ -37,8 +37,8 @@ about 2 million instructions per second for one channel at 48 kHz. [docs/AUDIO.m
 built it and why it has to work this way. To watch the decoder at work, [audio/](audio/) has a 133-card excerpt of
 The Blue Danube that is short enough to step through in `ekg` or Cardigan.
 
-To decode tracks in your own Rust program, use the library: `xtrack::Channel` decodes one track and
-`xtrack::Stereo` decodes two, a block of 64 samples at a time. They are the same code `lub` and `dub`
+To decode tracks in your own Rust program, use the library: `lubdub::Channel` decodes one track and
+`lubdub::Stereo` decodes two, a block of 64 samples at a time. They are the same code `lub` and `dub`
 run:
 
 ```rust
@@ -46,7 +46,7 @@ use heartburn::tape;
 
 let left = tape::values(&std::fs::read_to_string("song.left.track")?)?;
 let right = tape::values(&std::fs::read_to_string("song.right.track")?)?;
-let mut stereo = xtrack::Stereo::new(left.into_iter(), right.into_iter());
+let mut stereo = lubdub::Stereo::new(left.into_iter(), right.into_iter());
 while let Some(block) = stereo.next_block().map_err(|(side, e)| format!("{side:?} track: {e}"))? {
     for [left, right] in block {
         // two 16-bit samples, decoded by the two CARDIACs
@@ -73,8 +73,8 @@ Currently no binaries are shipped. If you have [Rust](https://rustup.rs) install
 source code. Cargo fetches [heartburn](https://github.com/StrangeQuery/heartburn), the CARDIAC engine, by
 itself:
 
-    git clone https://github.com/StrangeQuery/xtrack
-    cd xtrack
+    git clone https://github.com/StrangeQuery/lubdub
+    cd lubdub
     cargo build --release
 
 The commands end up in `target/release/`. Put that folder on your PATH.
@@ -146,7 +146,7 @@ its own CARDIAC.
 **How it works.** The two CARDIACs take turns on a single thread, one block at a time. First the left CARDIAC is
 given the next 66 cards of its track (one header and 64 codes), and it runs until it asks for more cards. Then the
 right CARDIAC does the same. Each channel's pairs of values are joined into samples, and `dub` writes them in the
-order left, right, left, right, which is what a stereo stream is. All of this is `xtrack::Stereo`, which
+order left, right, left, right, which is what a stereo stream is. All of this is `lubdub::Stereo`, which
 your own programs can use too.
 
 **Output.** Raw samples, as signed 16-bit little-endian numbers, in stereo, with the left sample first. As with

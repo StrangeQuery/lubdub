@@ -1,11 +1,11 @@
 [package]
-name = "xtrack"
+name = "lubdub"
 version = "0.1.0"
 edition = "2021"
 description = "Audio a CARDIAC decodes: the xtrack encoder, and the lub and dub players that decode on CARDIACs"
 rust-version = "1.97"
 license = "MIT"
-repository = "https://github.com/StrangeQuery/xtrack"
+repository = "https://github.com/StrangeQuery/lubdub"
 readme = "README.md"
 keywords = ["cardiac", "audio", "adpcm", "retrocomputing", "education"]
 categories = ["multimedia::audio", "emulators", "command-line-utilities"]
@@ -13,7 +13,7 @@ categories = ["multimedia::audio", "emulators", "command-line-utilities"]
 include = ["/src", "/audio/decode.cq", "/README.md", "/LICENSE"]
 
 [lib]
-name = "xtrack"
+name = "lubdub"
 path = "src/lib.rs"
 
 # xtrack codes a channel as a track of cards, lub decodes it on a CARDIAC and outputs the samples, dub decodes

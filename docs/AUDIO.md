@@ -122,14 +122,28 @@ extra cards. These are the results for the 4 seconds starting at 86 s, in the lo
 
 We use blocks of 64 samples, so there are two header cards for every 64 code cards.
 
-### Step sizes CARDIAC can multiply by
+### Trading multiplication for powers of ten
 
-Every sample needs the code C multiplied by the step size, and CARDIAC can't multiply. So we restricted the step
-size to M x 10^K, where M is from 1 to 9 and K is from 0 to 3:
+Every ADPCM decoder multiplies: each code in the track is multiplied by the block's step size. Multiplication is
+CARDIAC's weakness. It has no multiply instruction, and a general multiplication written as a loop of ADDs would
+cost hundreds of instructions per sample. But CARDIAC is a decimal machine, and SFT gives it something a binary
+machine doesn't have: multiplying by 10, 100 or 1,000 takes a single instruction.
 
+So we built the codec around that strength. The step size is always a single digit times a power of ten, M x 10^K,
+where M is from 1 to 9 and K is from 0 to 3:
+
+- **Multiplying by 10^K** is a shift of K digits, which is one SFT.
 - **Multiplying by M** uses a row of nine `ADD c` instructions. The decoder jumps into the row at the point that
   leaves exactly M of them to run.
-- **Multiplying by 10^K** is a shift of K digits, which is a single SFT instruction.
+
+That gives 36 step sizes, from 1 up to 9,000, which is plenty. Binary codecs make the same trade with powers of
+two, because shifting bits is cheap for them. Ours is the decimal version.
+
+The same strength pays off a second time when the decoder puts a sample together. A 16-bit sample doesn't fit in a
+cell, so the decoder keeps its thousands and its units apart, and splitting a number at a decimal digit is exactly
+what CARDIAC does best: SFT shifts the thousands out, and STO keeps only the last three digits. A binary machine
+would have to divide by 1,000 to do the same. The section on fitting a 16-bit sample into three-digit cells, below,
+shows how.
 
 K stops at 3 because the shift that extracts the thousands is `SFT 0(3-K)`. Our first attempt allowed only 1, 2
 or 5 for M. Allowing any value from 1 to 9 costs nothing extra, because the row of ADDs is there anyway, and it
@@ -663,6 +677,24 @@ expected samples, both through the library and through the programs.
 | Encoding | `stage` takes 0.03 s for the test clip and 0.5 s for one channel of the whole nine-minute piece. The Python version takes 0.9 s for the test clip. |
 | Track size | 66 cards for every 64 samples, plus one card at the end: 1,584,001 cards (5.2 MB as text) for the test clip. |
 | The whole piece | 27.2 million cards per channel, 54.4 million for stereo. Stored as 2 bytes per card, that is 109 MB, about the same size as the raw 16-bit audio (105 MB). As text it is 186 MB. |
+
+### The recording against the CARDIAC's output
+
+Plotted side by side, the CARDIAC's output can't be told apart from the recording. Over the whole test clip, the
+largest error in any sample is 4, on a scale of -32,768 to 32,767, and 91% of the samples come out exactly.
+
+![The test clip: the recording above, and the CARDIAC's output below, on the same scale](figures/waveform.svg)
+
+Zoomed in to ten milliseconds, every sample the CARDIAC outputs lands on the recording. That holds in the loudest
+passage, where the samples swing across most of the 16-bit range:
+
+![Ten milliseconds of the loudest passage: the recording as a line, and each sample the CARDIAC decoded as a dot](figures/waveform-loud.svg)
+
+It also holds in one of the softest passages, where the music moves only between about -100 and 13. This is the
+case that one value per sample couldn't have handled. With 1,999 levels for the whole range, this stretch would
+have been only three or four levels tall.
+
+![Ten milliseconds of one of the softest passages: the recording as a line, and each sample the CARDIAC decoded as a dot](figures/waveform-soft.svg)
 
 ## Part 2: Stereo
 

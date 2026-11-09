@@ -2,7 +2,7 @@
 
 These three tools play music, with every sample worked out by a CARDIAC:
 
-- `xtrack` encodes one channel of audio into a **track**, a file of CARDIAC cards.
+- `stage` encodes one channel of audio into a **track**, a file of CARDIAC cards.
 - `lub` plays one track. It runs the decoder, [`decode.cq`](decode.cq), on a CARDIAC, feeds it the track's cards,
   and writes out the samples the CARDIAC produces.
 - `dub` plays two tracks, left and right, as stereo, with one CARDIAC for each channel.
@@ -12,7 +12,7 @@ it in `ekg` or Cardigan like any other. `carc`, `burn` and `ekg` come from
 [heartburn](https://github.com/StrangeQuery/heartburn) (`brew install strangequery/tap/heartburn`), and with
 cargo-cardiac they are `cargo cardiac asm`, `cargo cardiac run` and `cargo cardiac debug`.
 
-## Part 1: Using xtrack, lub and dub
+## Part 1: Using stage, lub and dub
 
 ### 1. Start with a wav file
 
@@ -22,11 +22,11 @@ channel of `song.wav` at 48,000 samples per second:
 
     ffmpeg -i song.wav -af 'pan=mono|c0=c0' -ar 48000 -f s16le song.left.s16
 
-### 2. Encode it with xtrack
+### 2. Encode it with stage
 
-    xtrack song.left.s16 > song.left.track
+    stage song.left.s16 > song.left.track
 
-This is the only step that happens ahead of time. `xtrack` encodes a minute of audio in well under a tenth of a second.
+This is the only step that happens ahead of time. `stage` encodes a minute of audio in well under a tenth of a second.
 
 ### 3. Take a peek at the track
 
@@ -59,7 +59,7 @@ sound starts right away. To save the result instead of playing it:
 Encode the right channel as well, using `c0=c1` to pick it, then play both tracks with `dub`:
 
     ffmpeg -i song.wav -af 'pan=mono|c0=c1' -ar 48000 -f s16le song.right.s16
-    xtrack song.right.s16 > song.right.track
+    stage song.right.s16 > song.right.track
     dub song.left.track song.right.track | ffplay -nodisp -autoexit -f s16le -ar 48000 -ch_layout stereo -
 
 ### From your own program
@@ -143,12 +143,12 @@ the loud section:
 |---|---|---|
 | IMA ADPCM | 4 bits | 36.0 dB |
 | Ours, with one digit per sample and blocks of 32 | about 3.9 bits | 39.0 dB |
-| Ours, as `xtrack`, `lub` and `dub` use it: three digits per sample, blocks of 64 | about 10.3 bits | 77.8 dB |
+| Ours, as `stage`, `lub` and `dub` use it: three digits per sample, blocks of 64 | about 10.3 bits | 77.8 dB |
 
 With about the same amount of data per sample, ours comes out 3 dB better than IMA ADPCM. Part of that is that our
 encoder chooses a step size for each block ahead of time and sends it in a header, while IMA ADPCM has to adjust
 its step size from the codes as it goes. The rest is that this one-digit version tried every step size on each
-block and kept the best. With the one-pass rule `xtrack` uses now, it gets 37.2 dB. Size isn't the goal on CARDIAC, though, so the real decoder spends three digits on every
+block and kept the best. With the one-pass rule `stage` uses now, it gets 37.2 dB. Size isn't the goal on CARDIAC, though, so the real decoder spends three digits on every
 sample, and its errors end up about 42 dB quieter than IMA ADPCM's.
 
 ### Trading multiplication for powers of ten

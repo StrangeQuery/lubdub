@@ -6,7 +6,7 @@ use std::io::{self, BufRead, BufReader, BufWriter, IsTerminal, Write};
 
 use heartburn::tape;
 
-#[path = "../getopt.rs"]
+#[path = "../src/getopt.rs"]
 mod getopt;
 
 const PROG: &str = "lub";
@@ -16,7 +16,7 @@ fn usage() -> &'static str {
 Usage: lub [OPTION]... [TRACK]
 Decode one channel of audio on a CARDIAC, and output the samples as they are decoded.
 
-TRACK is a track made by xtrack, with one card per line. With no TRACK, or when TRACK is -, the track is read
+TRACK is a track made by stage, with one card per line. With no TRACK, or when TRACK is -, the track is read
 from standard input. The samples go to standard output as raw signed 16-bit little-endian numbers, at the
 sample rate the audio was encoded at. To play them with ffplay:
 

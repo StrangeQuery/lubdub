@@ -21,7 +21,7 @@ Everything described here is in this repository:
 - The decoder is the CARDIAC program [`audio/decode.cq`](../audio/decode.cq).
 - The encoder and the decoder's assembly live in the `lubdub` library ([`src/lib.rs`](../src/lib.rs)), which
   builds on [heartburn](https://github.com/StrangeQuery/heartburn), the CARDIAC engine.
-- `xtrack` encodes a channel, `lub` plays one channel, and `dub` plays two ([`src/bin/`](../src/bin/)).
+- `stage` encodes a channel, `lub` plays one channel, and `dub` plays two ([`stage/`](../stage/), [`lub/`](../lub/) and [`dub/`](../dub/)).
 - [`encode.py`](encode.py), next to this page, is the encoder as we first wrote it, in Python. We used it as the
   reference when we wrote the Rust version.
 
@@ -460,7 +460,7 @@ def main():
 main()
 ```
 
-It takes 0.9 seconds to encode the 32-second test clip. `xtrack` is the same encoder written in Rust
+It takes 0.9 seconds to encode the 32-second test clip. `stage` is the same encoder written in Rust
 (`lubdub::encode`). It writes exactly the same track, card for card, in 0.03 seconds. It even rounds halves to the
 nearest even number, as Python's `round` does, so that the two agree. Both have one safeguard. Sometimes the
 prediction overshoots so far that a small step size can't bring the sample back inside 16 bits. When that happens,
@@ -496,7 +496,7 @@ and the CARDIAC gives back the recording sample for sample. When a block does ne
 smallest one that reaches is nearly always the best one too, so there is nothing for a search to find.
 
 The search does earn its keep when the codes are coarse. With one digit per sample and blocks of 32, it gets
-39.0 dB, and the one-pass rule gets 37.2. Three digits leave it nothing to do. So `xtrack` now uses the rule, and
+39.0 dB, and the one-pass rule gets 37.2. Three digits leave it nothing to do. So `stage` now uses the rule, and
 encodes 16 times as fast as before: 0.5 seconds for one channel of the whole piece, instead of 8.4.
 
 ### Tracks are CARDIAC input
@@ -633,10 +633,10 @@ the pair really is a sample (the units must be 0 to 999 and the result must fit 
 x 1000 + units. If a pair isn't a sample, the error is kept, and the `Channel` returns it instead of the block.
 `lub` writes each sample as two little-endian bytes.
 
-`xtrack` makes the track, and `lub` plays it:
+`stage` makes the track, and `lub` plays it:
 
 ```sh
-ffmpeg -i song.wav -af 'pan=mono|c0=c0' -ar 48000 -f s16le - | $B/xtrack > song.left.track
+ffmpeg -i song.wav -af 'pan=mono|c0=c0' -ar 48000 -f s16le - | $B/stage > song.left.track
 $B/lub song.left.track | ffplay -nodisp -autoexit -f s16le -ar 48000 -ch_layout mono -
 ```
 
@@ -654,7 +654,7 @@ expected samples, both through the library and through the programs.
 | Quality | 77.8 dB signal-to-noise over the test clip. |
 | Speed | 38 + M instructions per sample, 39.5 on average including the headers and the loader (60.6 million for 1,536,000 samples). That is about 1.9 million instructions per second for one channel at 48 kHz. |
 | Memory | 83 of the 96 free cells. |
-| Encoding | `xtrack` takes 0.03 s for the test clip and 0.5 s for one channel of the whole nine-minute piece. The Python version takes 0.9 s for the test clip. |
+| Encoding | `stage` takes 0.03 s for the test clip and 0.5 s for one channel of the whole nine-minute piece. The Python version takes 0.9 s for the test clip. |
 | Track size | 66 cards for every 64 samples, plus one card at the end: 1,584,001 cards (5.2 MB as text) for the test clip. |
 | The whole piece | 27.2 million cards per channel, 54.4 million for stereo. Stored as 2 bytes per card, that is 109 MB, about the same size as the raw 16-bit audio (105 MB). As text it is 186 MB. |
 
@@ -703,7 +703,7 @@ and its own track. This logic is in the library too, as `lubdub::Stereo`, a pair
 only reads the two tracks and writes out the blocks `Stereo` gives it.
 
 ```sh
-ffmpeg -i song.wav -af 'pan=mono|c0=c1' -ar 48000 -f s16le - | $B/xtrack > song.right.track
+ffmpeg -i song.wav -af 'pan=mono|c0=c1' -ar 48000 -f s16le - | $B/stage > song.right.track
 $B/dub song.left.track song.right.track | ffplay -nodisp -autoexit -f s16le -ar 48000 -ch_layout stereo -
 ```
 
@@ -714,8 +714,8 @@ tells `ffplay` to expect exactly that.
 
 ```mermaid
 flowchart TD
-  A["song.wav"] --> PL["ffmpeg, then xtrack: the left channel's track"]
-  A --> PR["ffmpeg, then xtrack: the right channel's track"]
+  A["song.wav"] --> PL["ffmpeg, then stage: the left channel's track"]
+  A --> PR["ffmpeg, then stage: the right channel's track"]
   subgraph dub ["dub: one thread, taking turns one block at a time"]
     CL["CARDIAC: decode.cq"]
     CR["CARDIAC: decode.cq"]
@@ -767,7 +767,7 @@ run, if you want to count them.
 
 The encoder works one block at a time, and each block depends only on its own 64 samples and the last two samples
 the decoder produced. So the host could encode each block a few milliseconds before the CARDIAC needs it, and
-`xtrack` is fast enough to do that on about 0.2% of one core for stereo.
+`stage` is fast enough to do that on about 0.2% of one core for stereo.
 
 We don't, for two reasons. First, encoding is arithmetic: for every sample the encoder predicts, divides and
 rounds. If the host did that live, it would be doing about as much arithmetic as the CARDIACs, which is exactly

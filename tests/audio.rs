@@ -1,4 +1,4 @@
-//! xtrack and lub as a user runs them: samples in, a track, the samples a CARDIAC decodes from it out.
+//! stage and lub as a user runs them: samples in, a track, the samples a CARDIAC decodes from it out.
 use std::io::Write;
 use std::process::{Command, Output, Stdio};
 
@@ -25,10 +25,10 @@ fn tone() -> Vec<i16> {
 }
 
 #[test]
-fn lub_plays_what_xtrack_codes() {
+fn lub_plays_what_stage_codes() {
     let xs = tone();
     let raw: Vec<u8> = xs.iter().flat_map(|s| s.to_le_bytes()).collect();
-    let track = run(env!("CARGO_BIN_EXE_xtrack"), &[], &raw);
+    let track = run(env!("CARGO_BIN_EXE_stage"), &[], &raw);
     assert!(track.status.success(), "{}", String::from_utf8_lossy(&track.stderr));
     let (cards, expected) = lubdub::encode(&xs);
     let text: String = cards.iter().map(|c| format!("{c}\n")).collect();
@@ -64,12 +64,12 @@ fn lub_says_which_line_isnt_a_card() {
 }
 
 #[test]
-fn xtrack_refuses_half_a_sample() {
-    let track = run(env!("CARGO_BIN_EXE_xtrack"), &[], &[1, 2, 3]);
+fn stage_refuses_half_a_sample() {
+    let track = run(env!("CARGO_BIN_EXE_stage"), &[], &[1, 2, 3]);
     assert_eq!(track.status.code(), Some(1));
     assert_eq!(
         String::from_utf8_lossy(&track.stderr),
-        "xtrack: standard input: an odd number of bytes: not 16-bit samples\n"
+        "stage: standard input: an odd number of bytes: not 16-bit samples\n"
     );
 }
 
@@ -80,7 +80,7 @@ fn tracks(test: &str, channels: &[&[i16]]) -> (Vec<String>, Vec<Vec<i16>>) {
         .enumerate()
         .map(|(i, xs)| {
             let (cards, expected) = lubdub::encode(xs);
-            let path = std::env::temp_dir().join(format!("xtrack-{test}-{}-{i}.track", std::process::id()));
+            let path = std::env::temp_dir().join(format!("stage-{test}-{}-{i}.track", std::process::id()));
             std::fs::write(&path, cards.iter().map(|c| format!("{c}\n")).collect::<String>()).unwrap();
             (path.to_string_lossy().into_owned(), expected)
         })

@@ -1,10 +1,10 @@
 # lubdub
 
-`xtrack`, `lub` and `dub` play sound that a CARDIAC decodes. The CARDIAC does all of the decoding arithmetic for
+`stage`, `lub` and `dub` play sound that a CARDIAC decodes. The CARDIAC does all of the decoding arithmetic for
 every sample: every prediction, every correction and every carry. The host only feeds it cards and passes its
 output on to the speakers. It works in three steps:
 
-1. `xtrack` encodes one channel of audio into a track, which is a file of CARDIAC cards. You do this once, ahead of
+1. `stage` encodes one channel of audio into a track, which is a file of CARDIAC cards. You do this once, ahead of
    time.
 2. `lub` plays one channel and `dub` plays two (stereo). For each channel, they run the decoder,
    [`audio/decode.cq`](audio/decode.cq), on a CARDIAC, and they give it the track's cards one at a time, whenever
@@ -16,8 +16,8 @@ output on to the speakers. It works in three steps:
 
 Here is how to get from a wav file to your speakers, using `ffmpeg` to read the audio and `ffplay` to play it:
 
-    ffmpeg -i song.wav -af 'pan=mono|c0=c0' -ar 48000 -f s16le - | xtrack > song.left.track
-    ffmpeg -i song.wav -af 'pan=mono|c0=c1' -ar 48000 -f s16le - | xtrack > song.right.track
+    ffmpeg -i song.wav -af 'pan=mono|c0=c0' -ar 48000 -f s16le - | stage > song.left.track
+    ffmpeg -i song.wav -af 'pan=mono|c0=c1' -ar 48000 -f s16le - | stage > song.right.track
 
     lub song.left.track | ffplay -nodisp -autoexit -f s16le -ar 48000 -ch_layout mono -
     dub song.left.track song.right.track | ffplay -nodisp -autoexit -f s16le -ar 48000 -ch_layout stereo -
@@ -58,7 +58,7 @@ while let Some(block) = stereo.next_block().map_err(|(side, e)| format!("{side:?
 
 | | | resembles |
 |---|---|---|
-| [`xtrack`](#xtrack) | encodes a channel of audio into a track for a CARDIAC to decode | `lame`, `flac` |
+| [`stage`](#stage) | encodes a channel of audio into a track for a CARDIAC to decode | `lame`, `flac` |
 | [`lub`](#lub) | decodes a track on a CARDIAC and outputs the audio samples | `flac -d`, `mpg123` |
 | [`dub`](#dub) | decodes two tracks, left and right, each on its own CARDIAC, and outputs stereo | `flac -d`, `mpg123` |
 
@@ -79,11 +79,11 @@ itself:
 
 The commands end up in `target/release/`. Put that folder on your PATH.
 
-## xtrack
+## stage
 
-`xtrack` encodes one channel of audio into a track for the decoder.
+`stage` encodes one channel of audio into a track for the decoder.
 
-**Input.** `xtrack` reads raw audio: nothing but the samples for one channel, one after another, each a signed
+**Input.** `stage` reads raw audio: nothing but the samples for one channel, one after another, each a signed
 16-bit little-endian number. There is no header, so nothing in the file says what the sample rate is. We give such
 files the extension `.s16` (signed, 16 bits), but that's only a naming convention. You can make one from almost
 any audio file with `ffmpeg`. This takes the left channel of `song.wav` at 48 kHz:
@@ -95,12 +95,12 @@ anywhere, you have to give it to the player later.
 
 Then encode the samples, either from the file or straight from `ffmpeg` through a pipe:
 
-    xtrack song.left.s16 > song.left.track
-    ffmpeg -i song.wav -af 'pan=mono|c0=c0' -ar 48000 -f s16le - | xtrack > song.left.track
+    stage song.left.s16 > song.left.track
+    ffmpeg -i song.wav -af 'pan=mono|c0=c0' -ar 48000 -f s16le - | stage > song.left.track
 
 **Output.** The track goes to standard output, one card per line. Each block of 64 samples starts with two cards,
 K and M, which give the block's step size. Then come 64 cards, one per sample, each a code from -500 to 499. The
-last card is -1, which marks the end. For each block, `xtrack` takes the smallest step size that reaches as far as
+last card is -1, which marks the end. For each block, `stage` takes the smallest step size that reaches as far as
 the block strays from the prediction. It chooses each code to match the sample the decoder will actually produce, so small errors don't
 add up over time. It encodes 32 seconds of audio in a few hundredths of a second.
 
@@ -118,7 +118,7 @@ bytes, or if the track can't be written. It is 2 if there is a mistake on the co
 output a block at a time, as soon as the CARDIAC has decoded each block.
 
     lub song.left.track | ffplay -nodisp -autoexit -f s16le -ar 48000 -ch_layout mono -
-    xtrack < song.left.s16 | lub | ffplay ...    # the track can also come from standard input
+    stage < song.left.s16 | lub | ffplay ...    # the track can also come from standard input
 
 **Output.** Raw samples, as signed 16-bit little-endian numbers, in mono. `lub` won't write them to a terminal, so
 pipe them to a player or into a file. If the player stops reading, `lub` stops too, without an error.
@@ -141,7 +141,7 @@ can't be read or the decoder can't decode it. It is 2 if there is a mistake on t
 its own CARDIAC.
 
     dub song.left.track song.right.track | ffplay -nodisp -autoexit -f s16le -ar 48000 -ch_layout stereo -
-    xtrack < song.left.s16 | dub - song.right.track | ffplay ...    # one of the tracks can come from standard input
+    stage < song.left.s16 | dub - song.right.track | ffplay ...    # one of the tracks can come from standard input
 
 **How it works.** The two CARDIACs take turns on a single thread, one block at a time. First the left CARDIAC is
 given the next 66 cards of its track (one header and 64 codes), and it runs until it asks for more cards. Then the

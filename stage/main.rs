@@ -1,16 +1,16 @@
-//! xtrack encodes one channel of audio into a track for the CARDIAC decoder, `audio/decode.cq`, which lub and dub
+//! stage encodes one channel of audio into a track for the CARDIAC decoder, `audio/decode.cq`, which lub and dub
 //! run. The encoding itself is `lubdub::encode`. This program reads the samples and writes the cards.
 use std::io::{IsTerminal, Read, Write};
 
 
-#[path = "../getopt.rs"]
+#[path = "../src/getopt.rs"]
 mod getopt;
 
-const PROG: &str = "xtrack";
+const PROG: &str = "stage";
 
 fn usage() -> &'static str {
     "\
-Usage: xtrack [OPTION]... [FILE]
+Usage: stage [OPTION]... [FILE]
 Encode one channel of audio into a track for a CARDIAC to decode. lub and dub play tracks.
 
 FILE holds raw samples for one channel, as signed 16-bit little-endian numbers. Any sample rate works, for
@@ -21,7 +21,7 @@ which give the block's step size. Then come 64 cards, one per sample. The last c
 
 This makes the samples for the left channel of song.wav at 48 kHz with ffmpeg, and encodes them:
 
-  ffmpeg -i song.wav -af 'pan=mono|c0=c0' -ar 48000 -f s16le - | xtrack > song.left.track
+  ffmpeg -i song.wav -af 'pan=mono|c0=c0' -ar 48000 -f s16le - | stage > song.left.track
 
   -h, --help     display this help and exit
       --version  output version information and exit

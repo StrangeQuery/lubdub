@@ -7,7 +7,7 @@ use std::io::{self, BufRead, BufReader, BufWriter, IsTerminal, Write};
 
 use heartburn::tape;
 
-#[path = "../getopt.rs"]
+#[path = "../src/getopt.rs"]
 mod getopt;
 
 const PROG: &str = "dub";
@@ -17,7 +17,7 @@ fn usage() -> &'static str {
 Usage: dub [OPTION]... LEFT RIGHT
 Decode two channels of audio, each on its own CARDIAC, and output them as one stereo stream as they are decoded.
 
-LEFT and RIGHT are the tracks for the left and right channels, made by xtrack, with one card per line. One of
+LEFT and RIGHT are the tracks for the left and right channels, made by stage, with one card per line. One of
 them can be -, which means standard input. The samples go to standard output as raw signed 16-bit little-endian
 numbers, left then right, at the sample rate the audio was encoded at. To play them with ffplay:
 

@@ -1,5 +1,5 @@
 //! lub plays one channel of audio decoded by a CARDIAC. (dub plays two channels, in stereo.) The decoding is
-//! `xtrack::Channel`: a CARDIAC running the decoder, `audio/decode.cq`, which turns each block of the
+//! `lubdub::Channel`: a CARDIAC running the decoder, `audio/decode.cq`, which turns each block of the
 //! track's cards into a block of samples. lub only reads the track and writes the samples to standard output.
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, BufWriter, IsTerminal, Write};
@@ -87,7 +87,7 @@ fn main() {
         let line = line.unwrap_or_else(|e| die(format!("{shown}: {}", getopt::os_error(&e))));
         tape::values(&line).unwrap_or_else(|e| die(format!("{shown}: line {}: {e}", n + 1)))
     });
-    let mut channel = xtrack::Channel::new(cards);
+    let mut channel = lubdub::Channel::new(cards);
     let mut out = BufWriter::new(io::stdout().lock());
     loop {
         match channel.next_block() {
@@ -96,7 +96,7 @@ fn main() {
                 written(out.write_all(&bytes));
             }
             Ok(None) => break,
-            Err(e @ xtrack::Error::NoEnd) => die(format!("{shown} {e}")),
+            Err(e @ lubdub::Error::NoEnd) => die(format!("{shown} {e}")),
             Err(e) => die(e),
         }
     }

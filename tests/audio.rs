@@ -30,7 +30,7 @@ fn lub_plays_what_xtrack_codes() {
     let raw: Vec<u8> = xs.iter().flat_map(|s| s.to_le_bytes()).collect();
     let track = run(env!("CARGO_BIN_EXE_xtrack"), &[], &raw);
     assert!(track.status.success(), "{}", String::from_utf8_lossy(&track.stderr));
-    let (cards, expected) = xtrack::encode(&xs);
+    let (cards, expected) = lubdub::encode(&xs);
     let text: String = cards.iter().map(|c| format!("{c}\n")).collect();
     assert_eq!(String::from_utf8(track.stdout.clone()).unwrap(), text);
 
@@ -43,7 +43,7 @@ fn lub_plays_what_xtrack_codes() {
 #[test]
 fn lub_says_when_the_track_has_no_end() {
     let xs = tone();
-    let (cards, _) = xtrack::encode(&xs);
+    let (cards, _) = lubdub::encode(&xs);
     let text: String = cards[..cards.len() - 1].iter().map(|c| format!("{c}\n")).collect();
     let played = run(env!("CARGO_BIN_EXE_lub"), &[], text.as_bytes());
     assert_eq!(played.status.code(), Some(1));
@@ -79,7 +79,7 @@ fn tracks(test: &str, channels: &[&[i16]]) -> (Vec<String>, Vec<Vec<i16>>) {
         .iter()
         .enumerate()
         .map(|(i, xs)| {
-            let (cards, expected) = xtrack::encode(xs);
+            let (cards, expected) = lubdub::encode(xs);
             let path = std::env::temp_dir().join(format!("xtrack-{test}-{}-{i}.track", std::process::id()));
             std::fs::write(&path, cards.iter().map(|c| format!("{c}\n")).collect::<String>()).unwrap();
             (path.to_string_lossy().into_owned(), expected)

@@ -1,5 +1,5 @@
 //! xtrack encodes one channel of audio into a track for the CARDIAC decoder, `audio/decode.cq`, which lub and dub
-//! run. The encoding itself is `xtrack::encode`. This program reads the samples and writes the cards.
+//! run. The encoding itself is `lubdub::encode`. This program reads the samples and writes the cards.
 use std::io::{IsTerminal, Read, Write};
 
 
@@ -81,7 +81,7 @@ fn main() {
         .chunks_exact(2)
         .map(|b| i16::from_le_bytes([b[0], b[1]]))
         .collect();
-    let (cards, _) = xtrack::encode(&samples);
+    let (cards, _) = lubdub::encode(&samples);
     let mut out = std::io::BufWriter::new(std::io::stdout().lock());
     for c in cards {
         writeln!(out, "{c}").unwrap_or_else(|e| die(format!("standard output: {}", getopt::os_error(&e))));

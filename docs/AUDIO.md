@@ -19,7 +19,7 @@ ends with `dub`.
 Everything described here is in this repository:
 
 - The decoder is the CARDIAC program [`audio/decode.cq`](../audio/decode.cq).
-- The encoder and the decoder's assembly live in the `xtrack` library ([`src/lib.rs`](../src/lib.rs)), which
+- The encoder and the decoder's assembly live in the `lubdub` library ([`src/lib.rs`](../src/lib.rs)), which
   builds on [heartburn](https://github.com/StrangeQuery/heartburn), the CARDIAC engine.
 - `xtrack` encodes a channel, `lub` plays one channel, and `dub` plays two ([`src/bin/`](../src/bin/)).
 - [`encode.py`](encode.py), next to this page, is the encoder as we first wrote it, in Python. We used it as the
@@ -461,7 +461,7 @@ main()
 ```
 
 It takes 0.9 seconds to encode the 32-second test clip. `xtrack` is the same encoder written in Rust
-(`xtrack::encode`). It writes exactly the same track, card for card, in 0.03 seconds. It even rounds halves to the
+(`lubdub::encode`). It writes exactly the same track, card for card, in 0.03 seconds. It even rounds halves to the
 nearest even number, as Python's `round` does, so that the two agree. Both have one safeguard. Sometimes the
 prediction overshoots so far that a small step size can't bring the sample back inside 16 bits. When that happens,
 the encoder moves on to the next larger step size. The largest, 9,000, can always reach, so every block still gets
@@ -600,7 +600,7 @@ waits for the speakers to catch up.
 ### lub: the mono player in Rust
 
 The pipe above has a weak spot: the joining is done by a Python one-liner. `lub` does the same job as `burn` and
-the Python together, in Rust. The decoding itself lives in the library, as `xtrack::Channel`: one
+the Python together, in Rust. The decoding itself lives in the library, as `lubdub::Channel`: one
 CARDIAC running the decoder, which is given the track's next 66 cards (a header and 64 codes) each time it is
 asked for a block, and runs until it wants more. `lub` is a thin wrapper of about 100 lines, including its help
 text and error messages. It reads the track, asks the `Channel` for one block of samples after another, and writes
@@ -699,7 +699,7 @@ gain nothing and would add the work of keeping the threads in step. Instead, `du
 CARDIACs, and the two take turns, one block at a time. On each turn, a channel's CARDIAC is given the next 66 cards
 of its track (one header and 64 codes). It runs until it asks for more cards, which is exactly one block of 64
 samples. Then it is the other channel's turn. Each machine is still a plain mono decoder, with its own 100 cells
-and its own track. This logic is in the library too, as `xtrack::Stereo`, a pair of `Channel`s. `dub`
+and its own track. This logic is in the library too, as `lubdub::Stereo`, a pair of `Channel`s. `dub`
 only reads the two tracks and writes out the blocks `Stereo` gives it.
 
 ```sh
@@ -742,7 +742,7 @@ use heartburn::tape;
 
 let left = tape::values(&std::fs::read_to_string("song.left.track")?)?;
 let right = tape::values(&std::fs::read_to_string("song.right.track")?)?;
-let mut stereo = xtrack::Stereo::new(left.into_iter(), right.into_iter());
+let mut stereo = lubdub::Stereo::new(left.into_iter(), right.into_iter());
 while let Some(block) = stereo.next_block().map_err(|(side, e)| format!("{side:?} track: {e}"))? {
     for [left, right] in block {
         // two 16-bit samples, decoded by the two CARDIACs

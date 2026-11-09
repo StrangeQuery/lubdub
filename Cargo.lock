@@ -9,7 +9,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bfc5b791c146e8a3694c2c2eca8cddba3c0ca42419b41fc4f0bb206137a8a52"
 
 [[package]]
-name = "xtrack"
+name = "lubdub"
 version = "0.1.0"
 dependencies = [
  "heartburn",

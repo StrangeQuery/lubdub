@@ -64,15 +64,15 @@ Encode the right channel as well, using `c0=c1` to pick it, then play both track
 
 ### From your own program
 
-`lub` and `dub` are thin wrappers around the library. `xtrack::Channel` decodes one track, and
-`xtrack::Stereo` decodes two, one block of 64 samples at a time:
+`lub` and `dub` are thin wrappers around the library. `lubdub::Channel` decodes one track, and
+`lubdub::Stereo` decodes two, one block of 64 samples at a time:
 
 ```rust
 use heartburn::tape;
 
 let left = tape::values(&std::fs::read_to_string("song.left.track")?)?;
 let right = tape::values(&std::fs::read_to_string("song.right.track")?)?;
-let mut stereo = xtrack::Stereo::new(left.into_iter(), right.into_iter());
+let mut stereo = lubdub::Stereo::new(left.into_iter(), right.into_iter());
 while let Some(block) = stereo.next_block().map_err(|(side, e)| format!("{side:?} track: {e}"))? {
     for [left, right] in block {
         // two 16-bit samples, decoded by the two CARDIACs

@@ -13,8 +13,8 @@ passage of the piece and swells into the loud section, and it contains the examp
 decoder.
 
 Part 1 builds a mono player. It covers the coding scheme, the decoder written as a CARDIAC program, the encoder,
-the shell pipe that first played a channel, and finally `lub`, the mono player as a program. Part 2 adds stereo,
-with `dub`, and ends with playing in step with a picture.
+the shell pipe that first played a channel, and finally `lub`, the mono player as a program. Part 2 adds stereo and
+ends with `dub`.
 
 Everything described here is in this repository:
 
@@ -783,24 +783,6 @@ raw audio in memory, and then it could simply play that audio directly.
 A track isn't a pre-rendered result. It is the music stored in the form the player reads, just as a demo ships a
 packed music file and decodes it as it plays. Nothing is computed ahead of time except the encoding. Every sample
 is still decoded by a CARDIAC at the moment it is played.
-
-### Playing in step with a picture
-
-`dub` writes its samples as fast as the pipe takes them, and `ffplay` sets the pace. A player that shows pictures
-with the sound needs the samples on a clock instead. We built one on `Stereo`, and it works like this:
-
-- A decoder thread runs `Stereo`, reading each track's cards from its file as the CARDIACs ask for them, and keeps
-  a buffer about two seconds ahead of the sound card. Each sample is dropped as soon as it has been played, so
-  neither the cards nor the samples are ever all in memory at once.
-- The sound card is opened at 48 kHz and drains the buffer. Its first callback works out where the picture's clock
-  will be when the first sample is actually heard, counting the output's latency, and from then on it counts
-  samples. The sound card's clock drifts from the picture's by some tens of parts per million, about 10 ms over
-  five minutes, which is too little to hear.
-- If the CARDIACs ever fell behind, the missing samples would play as silence and be counted, so a machine that
-  is too slow shows up in the numbers instead of quietly drifting.
-
-The CARDIACs still do all of the decoding. The host's part is the same as in `dub`: joining each pair of values
-into a sample and interleaving the channels, then handing the samples to the sound card at the right moment.
 
 ### Still to do
 

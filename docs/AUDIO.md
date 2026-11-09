@@ -13,8 +13,8 @@ passage of the piece and swells into the loud section, and it contains the examp
 decoder.
 
 Part 1 builds a mono player. It covers the coding scheme, the decoder written as a CARDIAC program, the encoder,
-the shell pipe that first played a channel, and finally `lub`, the mono player as a program. Part 2 adds stereo and
-ends with `dub`.
+the shell pipe that first played a channel, and finally `lub`, the mono player as a program. Part 2 adds stereo,
+with `dub`, and ends with playing in step with a picture.
 
 Everything described here is in this repository:
 
@@ -525,7 +525,9 @@ of The Blue Danube takes slightly more than that.
 This is how we first played a channel, using the Python encoder, `burn`, and a few lines of Python to join the
 values. The input is a raw audio file: nothing but 48 kHz stereo samples, each a signed 16-bit little-endian
 number, with no header. We give such files the extension `.s16`. The first command below makes one from a wav
-file with `ffmpeg`. Run these from the top of the repository after building the tools:
+file with `ffmpeg`. Run these from the top of the repository after building it with `cargo build --release`, which
+puts `stage`, `lub` and `dub` in `target/release`. `carc` and `burn` aren't part of this repository; they come with
+[heartburn](https://lab.strangequery.com/heartburn/), whose page says how to install them.
 
 ```sh
 B=target/release
@@ -533,14 +535,14 @@ ffmpeg -i song.wav -ar 48000 -ac 2 -f s16le song.s16
 S=song.s16
 
 # assemble the decoder once; this writes audio/decode.cqb
-$B/carc audio/decode.cq
+carc audio/decode.cq
 
 # encode the left channel, 32 seconds starting at 60 s:
 # the cards, and the samples the decoder should produce
 python3 docs/encode.py $S 0 60 32 left.cards left.expect
 
 # decode it on a CARDIAC; 32 seconds of one channel is about 61 million instructions
-$B/burn --limit=100000000000 audio/decode.cqb < left.cards > left.out
+burn --limit=100000000000 audio/decode.cqb < left.cards > left.out
 ```
 
 **Checking the result.** `burn` prints each output value on its own line, so every sample takes two lines: the
@@ -579,7 +581,7 @@ flowchart TD
 ```
 
 ```sh
-$B/burn --limit=100000000000 audio/decode.cqb < left.cards \
+burn --limit=100000000000 audio/decode.cqb < left.cards \
   | python3 -c '
 import sys, struct
 out = sys.stdout.buffer
@@ -640,6 +642,10 @@ ffmpeg -i song.wav -af 'pan=mono|c0=c0' -ar 48000 -f s16le - | $B/stage > song.l
 $B/lub song.left.track | ffplay -nodisp -autoexit -f s16le -ar 48000 -ch_layout mono -
 ```
 
+A track doesn't record its sample rate. `lub` writes samples as fast as the CARDIAC decodes them, and whatever
+plays them sets the speed, so the `-ar 48000` given to `ffplay` has to match the rate the audio was encoded at.
+Given the wrong rate, the music plays too fast or too slow.
+
 `lub` produces exactly the same bytes as the `burn` and Python pipe. When something is wrong, it stops with a
 message instead of playing noise: if a track has no end card, if a line isn't a card, or if the decoder's two
 values aren't a 16-bit sample. If the player stops reading, `lub` quietly stops too. The tests
@@ -674,8 +680,8 @@ The first stereo clip was made by running `burn` once for each channel and writi
 ```sh
 python3 docs/encode.py $S 0 60 32 left.cards  left.expect
 python3 docs/encode.py $S 1 60 32 right.cards right.expect
-$B/burn --limit=100000000000 audio/decode.cqb < left.cards  > left.out
-$B/burn --limit=100000000000 audio/decode.cqb < right.cards > right.out
+burn --limit=100000000000 audio/decode.cqb < left.cards  > left.out
+burn --limit=100000000000 audio/decode.cqb < right.cards > right.out
 
 python3 -c '
 import struct, wave
@@ -728,7 +734,7 @@ flowchart TD
   J --> FF["ffplay: raw signed 16-bit, 48 kHz, stereo"] --> SP(("speakers"))
 ```
 
-`dub`'s output is byte for byte the two channels of the batch way above, interleaved, and it takes 0.24 s for
+`dub`'s output is byte for byte the two channels of the batch way above, interleaved, and it takes 0.26 s for
 the 32-second test clip. If the two tracks are different lengths, `dub` reports an error that names the longer track and
 says by how many samples. It doesn't play one channel on its own.
 
@@ -778,8 +784,24 @@ A track isn't a pre-rendered result. It is the music stored in the form the play
 packed music file and decodes it as it plays. Nothing is computed ahead of time except the encoding. Every sample
 is still decoded by a CARDIAC at the moment it is played.
 
+### Playing in step with a picture
+
+`dub` writes its samples as fast as the pipe takes them, and `ffplay` sets the pace. A player that shows pictures
+with the sound needs the samples on a clock instead. We built one on `Stereo`, and it works like this:
+
+- A decoder thread runs `Stereo`, reading each track's cards from its file as the CARDIACs ask for them, and keeps
+  a buffer about two seconds ahead of the sound card. Each sample is dropped as soon as it has been played, so
+  neither the cards nor the samples are ever all in memory at once.
+- The sound card is opened at 48 kHz and drains the buffer. Its first callback works out where the picture's clock
+  will be when the first sample is actually heard, counting the output's latency, and from then on it counts
+  samples. The sound card's clock drifts from the picture's by some tens of parts per million, about 10 ms over
+  five minutes, which is too little to hear.
+- If the CARDIACs ever fell behind, the missing samples would play as silence and be counted, so a machine that
+  is too slow shows up in the numbers instead of quietly drifting.
+
+The CARDIACs still do all of the decoding. The host's part is the same as in `dub`: joining each pair of values
+into a sample and interleaving the channels, then handing the samples to the sound card at the right moment.
+
 ### Still to do
 
 - A binary card format for long tracks (2 bytes per card), so that a whole piece isn't 186 MB of text.
-- Playing in step with a picture, which means handing the samples to the sound card on a clock, instead of as fast
-  as the pipe will take them.

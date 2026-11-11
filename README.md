@@ -35,7 +35,8 @@ straight line through the previous two samples, and the track's card for that sa
 prediction, as a three-digit code times the step size. Decoding takes about 40 instructions per sample, which is
 about 2 million instructions per second for one channel at 48 kHz. [docs/AUDIO.md](docs/AUDIO.md) explains how we
 built it and why it has to work this way. To watch the decoder at work, [audio/](audio/) has a 133-card excerpt of
-The Blue Danube that is short enough to step through in `ekg` or Cardigan.
+The Blue Danube that is short enough to step through in `ekg` or [Cardigan](https://lab.strangequery.com/cardigan/).
+lubdub is part of Strange Query's [CARDIAC collection](https://lab.strangequery.com/cardiac/).
 
 To decode tracks in your own Rust program, use the library: `lubdub::Channel` decodes one track and
 `lubdub::Stereo` decodes two, a block of 64 samples at a time. They are the same code `lub` and `dub`

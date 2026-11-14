@@ -1,4 +1,4 @@
-# Playing audio with CARDIAC math
+# lubdub: A sound generator built with CARDIAC
 
 Our goal was to play CD-quality sound (48,000 samples per second, 16 bits per sample) in which every sample is
 calculated by a CARDIAC. The host computer is allowed to feed cards to the machine and to send the numbers it
